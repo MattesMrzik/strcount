@@ -22,6 +22,7 @@ parser.add_argument('--precise-clipping', help='Aligner option: use arg as the i
 parser.add_argument('-t', '--threads', type=int, default=1, help='Number of threads for GraphAligner (default: 1)')
 parser.add_argument('--verbose', action='store_true', help='verbose')
 parser.add_argument('--only_use_provided_fixes', action='store_true', help='only use the provided suffixes and prefixes, not the complete reference sequence.')
+parser.add_argument('--use_fixed_len_before_and_after_fixes', action='store_true', help='Use a fixed length for the before or after prefix or suffix sequences and not using the complete reference sequence.')
 
 args = parser.parse_args()
 
@@ -42,6 +43,11 @@ id_thres = args.precise_clipping
 threads = args.threads
 verbose = args.verbose
 only_use_provided_fixes = args.only_use_provided_fixes
+use_fixed_len_before_and_after_fixes = args.use_fixed_len_before_and_after_fixes
+
+if use_fixed_len_before_and_after_fixes:
+    print("Error: --use_fixed_len_before_and_after_fixes is not implemented yet. Please remove this flag and try again.")
+    exit(1)
 
 #cwd = os.getcwd()
 
