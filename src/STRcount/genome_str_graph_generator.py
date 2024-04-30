@@ -11,6 +11,7 @@ parser.add_argument('--repeat_orientation', help='the orientation of the repeat 
 parser.add_argument('--prefix_orientation', help='the orientation of the prefix, + or -', required=False, default="+")
 parser.add_argument('--suffix_orientation', help='the orientation of the suffix, + or -', required=False, default="+")
 parser.add_argument('--verbose', action='store_true', help='verbose')
+parser.add_argument('--only_use_provided_fixes', action='store_true', help='only use the provided suffixes and prefixes, not the complete reference sequence.')
 
 args = parser.parse_args()
 
@@ -20,6 +21,7 @@ repeat_orientation = args.repeat_orientation
 prefix_orientation = args.prefix_orientation
 suffix_orientation = args.suffix_orientation
 verbose = args.verbose
+only_use_provided_fixes = args.only_use_provided_fixes
 
 # read in the configs and store them in the respective variables
 configs = list()
@@ -27,14 +29,24 @@ config_fh = open(config)
 header = config_fh.readline()
 
 for line in config_fh:
+    if line.startswith("#"):
+        continue
+    if len(line) < 2:
+        continue
+    if verbose:
+        sys.stderr.write("Parsing config file line: " + line.strip() + "\n")
     configs.append(line.rstrip().split()[0:7])
 
 configs_dict = dict()
 
 # In this case I am extracting only 1 config but in case we have more than 1,
 # we can have a loop here to extract the other configs
-for chromosome, begin, end, name, repeat, prefix, suffix in configs:
-    configs_dict[name] = [chromosome, begin, end, name, repeat, prefix, suffix]
+try:
+    for chromosome, begin, end, name, repeat, prefix, suffix in configs:
+        configs_dict[name] = [chromosome, int(begin), int(end), name, repeat, prefix, suffix]
+except Exception as e:
+    sys.stderr.write("Error in config file: " + str(e) + "\n")
+    sys.exit(1)
 
 print("H\tVN:Z:a.0")
 
@@ -52,36 +64,58 @@ links_cols = ["RecordType", "From", "FromOrient", "To", "ToOrient", "Overlap"]
 sep = " ; "
 for chr in pysam.FastxFile(reference_file):
     for key in configs_dict:
-        if (chr.name == configs_dict[key][0]):
+        config_chr, begin, end, name, repeat, prefix, suffix = configs_dict[key]
+        if (chr.name == config_chr):
             # TODO what if the config file contains multiple entries for the same chromosome?
             if verbose:
                 sys.stderr.write("Processing: " + key + "\n")
             c = c + 1
 
-            before_prefix = ["S", chr.name + "_before_prefix", chr.sequence[: int(begin)-(len(prefix)+1)]]
-            prefix = ["S", chr.name + "_prefix", chr.sequence[int(begin)-(len(prefix)+1): int(begin)-1]]
-            repeat = ["S", "repeat_" + str(c), configs_dict[key][4]]
-            suffix = ["S", chr.name + "_suffix", chr.sequence[int(end)+1: (int(end)+len(suffix)+1)]]
-            after_suffix = ["S", chr.name + "_after_suffix", chr.sequence[int(end)+(len(suffix)+1):]]
+            before_prefix_id = f"{chr.name}_before_prefix_{c}"
+            prefix_id = f"{chr.name}_prefix_{c}"
+            repeat_id = f"repeat_{c}"
+            suffix_id = f"{chr.name}_suffix_{c}"
+            after_suffix_id = f"{chr.name}_after_suffix_{c}"
 
-            sides[chr.name] = [before_prefix, prefix, repeat, suffix, after_suffix]
+            if not only_use_provided_fixes:
+                before_prefix_line = ["S", before_prefix_id, chr.sequence[: begin - (len(prefix)+1)]]
+                after_suffix_line = ["S", after_suffix_id, chr.sequence[end + (len(suffix)+1):]]
+            prefix_line = ["S", prefix_id, prefix]
+            repeat_line = ["S", repeat_id, repeat]
+            suffix_line = ["S", suffix_id, suffix]
+
+
+            dict_key = chr.name + "_" + str(c)
+
+            if not only_use_provided_fixes:
+                sides[dict_key] = [before_prefix_line, prefix_line, repeat_line, suffix_line, after_suffix_line]
+            else:
+                sides[dict_key] = [prefix_line, repeat_line, suffix_line]
 
             if verbose:
                 sys.stderr.write(f"Sides for chromosome {chr.name}\n")
-                sides_df = pd.DataFrame([before_prefix, prefix, repeat, suffix, after_suffix], columns=sides_cols)
+                sides_df = pd.DataFrame(sides[dict_key], columns=sides_cols)
                 sys.stderr.write(sides_df.to_string() + "\n")
 
-            before_prefix = ["L", chr.name + "_before_prefix", "+", chr.name + "_prefix", prefix_orientation, "*"]
-            prefix = ["L", chr.name + "_prefix", prefix_orientation, "repeat_" + str(c), repeat_orientation, "*"]
-            repeat = ["L", "repeat_" + str(c), repeat_orientation, "repeat_" + str(c), repeat_orientation, "*"]
-            suffix = ["L", "repeat_" + str(c), repeat_orientation, chr.name + "_suffix", suffix_orientation, "*"]
-            after_suffix = ["L", chr.name + "_suffix", suffix_orientation, chr.name + "_after_suffix", "+", "*"]
 
-            links[chr.name] = [before_prefix, prefix, repeat, suffix, after_suffix]
+            cigar = "0M" # the "to" segment follows directly after the "from segment"
+
+            if not only_use_provided_fixes:
+                before_prefix_line = ["L", before_prefix_id, "+", prefix_id, prefix_orientation, cigar]
+                after_suffix_line = ["L", suffix_id, suffix_orientation, after_suffix_id, "+", cigar]
+
+            prefix_line = ["L", prefix_id, prefix_orientation, repeat_id, repeat_orientation, cigar]
+            repeat_line = ["L", repeat_id, repeat_orientation, repeat_id, repeat_orientation, cigar]
+            suffix_line = ["L", repeat_id, repeat_orientation, suffix_id, suffix_orientation, cigar]
+
+            if not only_use_provided_fixes:
+                links[dict_key] = [before_prefix_line, prefix_line, repeat_line, suffix_line, after_suffix_line]
+            else:
+                links[dict_key] = [prefix_line, repeat_line, suffix_line]
 
             if verbose:
                 sys.stderr.write(f"Links for chromosome {chr.name}\n")
-                sides_df = pd.DataFrame([before_prefix, prefix, repeat, suffix, after_suffix], columns=links_cols)
+                sides_df = pd.DataFrame(links[dict_key], columns=links_cols)
                 sys.stderr.write(sides_df.to_string() + "\n")
 
         else:
@@ -92,12 +126,12 @@ for chr in pysam.FastxFile(reference_file):
 # TODO use to_csv to print the dataframe instead of stdout?
 for key in sides:
     for entry in sides[key]:
-        print("\t".join(entry[1:]))
+        print("\t".join(entry))
 
 
 for key in links:
     for entry in links[key]:
-        print("\t".join(entry[1:]))
+        print("\t".join(entry))
 
 if (c == 0):
     print("Error : The chromosome of the config file was not found in the reference, please double check your inputs.")

@@ -21,6 +21,8 @@ parser.add_argument('--multiseed-DP', help='Aligner option', required=False, def
 parser.add_argument('--precise-clipping', help='Aligner option: use arg as the identity threshold for a valid alignment.', required=False, default="")
 parser.add_argument('-t', '--threads', type=int, default=1, help='Number of threads for GraphAligner (default: 1)')
 parser.add_argument('--verbose', action='store_true', help='verbose')
+parser.add_argument('--only_use_provided_fixes', action='store_true', help='only use the provided suffixes and prefixes, not the complete reference sequence.')
+
 args = parser.parse_args()
 
 ref = args.reference
@@ -39,6 +41,7 @@ seed = args.multiseed_DP
 id_thres = args.precise_clipping
 threads = args.threads
 verbose = args.verbose
+only_use_provided_fixes = args.only_use_provided_fixes
 
 #cwd = os.getcwd()
 
@@ -96,12 +99,17 @@ def main():
     else:
         verbose_arg = ""
 
+    if only_use_provided_fixes:
+        only_use_provided_fixes_arg = "--only_use_provided_fixes"
+    else:
+        only_use_provided_fixes_arg = ""
+
     create_tmp_folder = os.system(f"mkdir {out_dir}tmp")
 
-    optional_path_prefix = "./src/STRcount/" # If you dont want to install to run the tool
     optional_path_prefix = ""
+    optional_path_prefix = "./src/STRcount/" # If you dont want to install to run the tool
 
-    command = f"{optional_path_prefix}genome_str_graph_generator.py --ref {ref} --config {config_file} {rep_orientation_arg} {pre_orientation_arg} {suf_orientation_arg} {verbose_arg} > {out_dir}tmp/genome_str_graph.gfa"
+    command = f"{optional_path_prefix}genome_str_graph_generator.py --ref {ref} --config {config_file} {rep_orientation_arg} {pre_orientation_arg} {suf_orientation_arg} {verbose_arg} {only_use_provided_fixes_arg} > {out_dir}tmp/genome_str_graph.gfa"
     print_red(command)
     str_graph_generator = os.system(command)
 

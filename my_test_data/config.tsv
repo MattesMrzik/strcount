@@ -1,0 +1,6 @@
+chr	begin	end	name	repeat	prefix	suffix
+# begin is number of chars before repeat starts plus 1
+# end is number of chars before repeats starts plus repeat length minus 1
+#ref	35	45	GAT_repeat	GAT	ATCGTATATCGCTATCGTTA	CGAACGTTTCGCTTAATATAGCT
+ref	134	145	GGT_repeat	GGT	GCATGTATATCGCTACTACGTA	TGTTCTCTCTAGATCTCTGAGATCTA
+

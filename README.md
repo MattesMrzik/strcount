@@ -54,7 +54,11 @@ python src/STRcount/STRcount.py -h
 
  This format is the same as the format used in STRique as found [here](https://strique.readthedocs.io/en/latest/examples/intro/#configuration).
 
- The 150bp flanking region is suggested, longer flanks will require more time to execute, smaller flanks will take less time but the results may be less accurate.
+ The 150bp flanking region is suggested, longer flanks will require more time to execute, smaller flanks will take less
+ time but the results may be less accurate.
+
+ If reads are spanning multiple configured regions the alignment might not catch the repeat.
+ If "only_use_provided_fixes" is set, begin and end regions are not used. And the reference sequence is not used.
 
  ## Usage
 

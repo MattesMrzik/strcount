@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import argparse
+import sys
 
 
 class GraphAlignment:
@@ -13,11 +14,19 @@ class GraphAlignment:
         self.identity = identity
         self.aligned_fraction = aligned_fraction
 
+    def print(self):
+        sys.stderr.write(
+            f"read_name: {self.read_name}, strand: {self.strand}, spanned: {self.spanned}, count: {self.count}, alignment_score: {self.alignment_score}, identity: {self.identity}, aligned_fraction: {self.aligned_fraction}\n")
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--input', help='the input file which was generated from graphaligner', required=True)
-parser.add_argument('--min-identity', type=float, default=0.50, help='only use reads with identity greater than this', required=False)
-parser.add_argument('--min-aligned-fraction', type=float, default=0.8, help='require alignments cover this proportion of the query sequence', required=False)
-parser.add_argument('--write-non-spanned', action='store_true', default=False, help='do not require the reads to span the prefix/suffix region', required=False)
+parser.add_argument('--min-identity', type=float, default=0.50,
+                    help='only use reads with identity greater than this', required=False)
+parser.add_argument('--min-aligned-fraction', type=float, default=0.8,
+                    help='require alignments cover this proportion of the query sequence', required=False)
+parser.add_argument('--write-non-spanned', action='store_true', default=False,
+                    help='do not require the reads to span the prefix/suffix region', required=False)
 parser.add_argument('--verbose', action='store_true', help='verbose')
 
 args = parser.parse_args()
@@ -28,7 +37,11 @@ alignments = dict()
 with open(args.input) as f:
     for record in f:
         fields = record.rstrip().split("\t")
-        read_id = fields[0].split(' ')[0]  # remove FASTQ metadata that graphaligner emits
+
+        if args.verbose:
+            sys.stderr.write(f"Processing alignment: {', '.join(fields)}\n")
+
+        read_id = fields[0].split(' ')[0]  # remove FASTQ metadata that GraphAligner emits
 
         tags = dict()
         for t in fields[12:]:
@@ -59,13 +72,32 @@ with open(args.input) as f:
 
         valid = has_prefix and has_suffix
         strand = fields[4]
+        if args.verbose:
+            if strand != "+":
+                sys.stderr.write("Strand is not \"+\", exiting.\n")
         assert (strand == "+")
         if path_dir == "<":
             strand = "-"
         ga = GraphAlignment(read_id, strand, valid, count, align_score, identity, query_af)
-        if (valid or args.write_non_spanned) and ga.identity > args.min_identity and ga.aligned_fraction > args.min_aligned_fraction:
-            if ga.read_name not in alignments or alignments[ga.read_name].alignment_score < ga.alignment_score:
-                alignments[ga.read_name] = ga
+        if args.verbose:
+            sys.stderr.write("Found alignment: \n")
+            ga.print()
+        if not valid and not args.write_non_spanned:
+            if args.verbose:
+                sys.stderr.write("Skipping alignment because it does not span the prefix/suffix region\n")
+            continue
+        if ga.identity < args.min_identity:
+            if args.verbose:
+                sys.stderr.write("Skipping alignment because identity is too low\n")
+            continue
+        if ga.aligned_fraction < args.min_aligned_fraction:
+            if args.verbose:
+                sys.stderr.write("Skipping alignment because aligned fraction is too low\n")
+            continue
+        if ga.read_name not in alignments or alignments[ga.read_name].alignment_score < ga.alignment_score:
+            if args.verbose:
+                sys.stderr.write("Keeping alignment bc it has better score than previous alignment\n")
+            alignments[ga.read_name] = ga
 
 print("\t".join(["read_name", "strand", "spanned", "count", "align_score", "identity", "query_aligned_fraction"]))
 for ga in alignments.values():
