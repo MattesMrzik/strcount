@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import argparse
-import os
+
 
 class GraphAlignment:
     def __init__(self, read_name, strand, spanned, count, alignment_score, identity, aligned_fraction):
@@ -18,6 +18,8 @@ parser.add_argument('--input', help='the input file which was generated from gra
 parser.add_argument('--min-identity', type=float, default=0.50, help='only use reads with identity greater than this', required=False)
 parser.add_argument('--min-aligned-fraction', type=float, default=0.8, help='require alignments cover this proportion of the query sequence', required=False)
 parser.add_argument('--write-non-spanned', action='store_true', default=False, help='do not require the reads to span the prefix/suffix region', required=False)
+parser.add_argument('--verbose', action='store_true', help='verbose')
+
 args = parser.parse_args()
 
 input_file = open(args.input)
@@ -26,7 +28,7 @@ alignments = dict()
 with open(args.input) as f:
     for record in f:
         fields = record.rstrip().split("\t")
-        read_id = fields[0].split(' ')[0] # remove FASTQ metadata that graphaligner emits
+        read_id = fields[0].split(' ')[0]  # remove FASTQ metadata that graphaligner emits
 
         tags = dict()
         for t in fields[12:]:
@@ -57,7 +59,7 @@ with open(args.input) as f:
 
         valid = has_prefix and has_suffix
         strand = fields[4]
-        assert(strand == "+")
+        assert (strand == "+")
         if path_dir == "<":
             strand = "-"
         ga = GraphAlignment(read_id, strand, valid, count, align_score, identity, query_af)
@@ -65,6 +67,7 @@ with open(args.input) as f:
             if ga.read_name not in alignments or alignments[ga.read_name].alignment_score < ga.alignment_score:
                 alignments[ga.read_name] = ga
 
-print("\t".join(["read_name","strand", "spanned", "count", "align_score", "identity", "query_aligned_fraction"]))
+print("\t".join(["read_name", "strand", "spanned", "count", "align_score", "identity", "query_aligned_fraction"]))
 for ga in alignments.values():
-    print("%s\t%s\t%d\t%d\t%.1f\t%.3f\t%.3f" % (ga.read_name, ga.strand, ga.spanned, ga.count, ga.alignment_score, ga.identity, ga.aligned_fraction))
+    print("%s\t%s\t%d\t%d\t%.1f\t%.3f\t%.3f" % (ga.read_name, ga.strand, ga.spanned,
+          ga.count, ga.alignment_score, ga.identity, ga.aligned_fraction))

@@ -19,6 +19,8 @@ parser.add_argument('--cleanup', help='do you want to clean up the temporary fil
 parser.add_argument('--output_directory', help='the output directory for all output and temporary files', required=False, default="./")
 parser.add_argument('--multiseed-DP', help='Aligner option', required=False, default="")
 parser.add_argument('--precise-clipping', help='Aligner option: use arg as the identity threshold for a valid alignment.', required=False, default="")
+parser.add_argument('-t', '--threads', type=int, default=1, help='Number of threads for GraphAligner (default: 1)')
+parser.add_argument('--verbose', action='store_true', help='verbose')
 args = parser.parse_args()
 
 ref = args.reference
@@ -35,8 +37,13 @@ out_dir = args.output_directory
 out_file = args.output
 seed = args.multiseed_DP
 id_thres = args.precise_clipping
+threads = args.threads
+verbose = args.verbose
 
 #cwd = os.getcwd()
+
+def print_red(s):
+    print("\033[31m" + s + "\033[0m")
 
 def main():
     if min_id:
@@ -79,23 +86,42 @@ def main():
     else:
         id_thres_arg = ""
 
+    if threads:
+        threads_arg = f"-t {threads}"
+    else:
+        threads_arg = ""
+
+    if verbose:
+        verbose_arg = "--verbose"
+    else:
+        verbose_arg = ""
+
     create_tmp_folder = os.system(f"mkdir {out_dir}tmp")
 
-    str_graph_generator = os.system(f"genome_str_graph_generator.py --ref {ref} --config {config_file} {rep_orientation_arg} {pre_orientation_arg} {suf_orientation_arg} > {out_dir}tmp/genome_str_graph.gfa")
+    optional_path_prefix = "./src/STRcount/" # If you dont want to install to run the tool
+    optional_path_prefix = ""
+
+    command = f"{optional_path_prefix}genome_str_graph_generator.py --ref {ref} --config {config_file} {rep_orientation_arg} {pre_orientation_arg} {suf_orientation_arg} {verbose_arg} > {out_dir}tmp/genome_str_graph.gfa"
+    print_red(command)
+    str_graph_generator = os.system(command)
 
     if str_graph_generator == 0:
         logging.info("STR Reference Graph has been generated")
-    else: 
+    else:
         logging.error("Error while Generating STR genome graph")
 
-    ga_align = os.system(f"GraphAligner {seed_arg} {id_thres_arg} -g {out_dir}tmp/genome_str_graph.gfa -f {reads} -a {out_dir}tmp/alignment.gaf -x vg")
+    command = f"GraphAligner {seed_arg} {id_thres_arg} -g {out_dir}tmp/genome_str_graph.gfa -f {reads} -a {out_dir}tmp/alignment.gaf -x vg {threads_arg} {verbose_arg}"
+    print_red(command)
+    ga_align = os.system(command)
 
     if ga_align == 0:
         logging.info("Reads aligned to Reference Graph")
     else:
         logging.error("Error in aligning the reads to the reference graph")
 
-    parse_gaf = os.system(f"parse_gaf.py --input {out_dir}tmp/alignment.gaf {min_id_arg} {min_align_arg} {span_arg} > {out_dir}{out_file}")
+    command = f"{optional_path_prefix}parse_gaf.py --input {out_dir}tmp/alignment.gaf {min_id_arg} {min_align_arg} {span_arg} {verbose_arg} > {out_dir}{out_file}"
+    print_red(command)
+    parse_gaf = os.system(command)
 
     if parse_gaf == 0:
         logging.info("A read wise count has been generated")

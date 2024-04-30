@@ -1,5 +1,5 @@
 # STRcount
-Software tool to analyse STR loci from long read data. STRcount can count the number of repeats in a repeat expansion and give you the count in a tabular format for further downstream analysis.
+A software tool to analyze STR loci from long-read data. STRcount can count the number of repeats in a repeat expansion and give you the count in a tabular format for further downstream analysis.
 
 ## Release notes
 * 0.1.0: Initial release with tools updated on Pypi and ready to use.
@@ -13,7 +13,7 @@ Developed and tested on Python 3.7.10. Dependencies include:
 
 ### Install GraphAligner
 
-STRcount requires and uses GraphAligner as it's alignment tool. To install this you could either install it using Anaconda:
+STRcount requires and uses GraphAligner as its alignment tool. To install this you could either install it using Anaconda:
 * Install miniconda https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 * ```conda install -c bioconda graphaligner```
 
@@ -47,19 +47,19 @@ python src/STRcount/STRcount.py -h
 ## Config file format
 
  The config file should be in the following format:
- 
- | chr | begin | end | name | repeat | prefix | suffix | 
- | --- | --- | --- | --- | --- | --- | --- | 
- | chr9 | 27573527 | 27573544 | c9orf72 | GGCCCC | <150bp_left_flank> | <150bp_right_flank> | 
- 
- This format is the same as the format used in STRique as found [here](https://strique.readthedocs.io/en/latest/examples/intro/#configuration). 
- 
- The 150bp flanking region is suggested, longer flanks will require more time to execute, smaller flanks will take less time but the results may be less accurate. 
- 
+
+ | chr | begin | end | name | repeat | prefix | suffix |
+ | --- | --- | --- | --- | --- | --- | --- |
+ | chr9 | 27573527 | 27573544 | c9orf72 | GGCCCC | <150bp_left_flank> | <150bp_right_flank> |
+
+ This format is the same as the format used in STRique as found [here](https://strique.readthedocs.io/en/latest/examples/intro/#configuration).
+
+ The 150bp flanking region is suggested, longer flanks will require more time to execute, smaller flanks will take less time but the results may be less accurate.
+
  ## Usage
- 
+
  If installed using pip or from source, you will be able to use it using ```STRcount``` else if you have installed to develop, you will be able to use it using ```python src/STRcount/STRcount.py```
- 
+
  ```
  STRcount [-h] --reference REFERENCE --fastq FASTQ --config CONFIG
                    --output OUTPUT [--min-identity MIN_IDENTITY]
@@ -103,13 +103,13 @@ optional arguments:
                         Aligner option: use arg as the identity threshold for
                         a valid alignment.
 ```
-                        
-                        
+
+
  ## Output
 
 The output is in a ```.tsv``` format that will look something like this:
-| read_name | strand | spanned | count | align_score | identity | query_aligned_fraction | 
-| --- | --- | --- | --- | --- | --- | --- | 
+| read_name | strand | spanned | count | align_score | identity | query_aligned_fraction |
+| --- | --- | --- | --- | --- | --- | --- |
 
 * read_name: The name of the read that is currently being proccessed
 * strand: The strand on which the primary alignment has been detected
