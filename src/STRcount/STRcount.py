@@ -23,6 +23,9 @@ parser.add_argument('-t', '--threads', type=int, default=1, help='Number of thre
 parser.add_argument('--verbose', action='store_true', help='verbose')
 parser.add_argument('--only_use_provided_fixes', action='store_true', help='only use the provided suffixes and prefixes, not the complete reference sequence.')
 parser.add_argument('--use_fixed_len_before_and_after_fixes', action='store_true', help='Use a fixed length for the before or after prefix or suffix sequences and not using the complete reference sequence.')
+parser.add_argument('--ucsc_browser_coords', action='store_true',
+                        help='use UCSC browser coordinates, i.e. start counting at 1 and end is inclusive.')
+
 
 args = parser.parse_args()
 
@@ -44,6 +47,7 @@ threads = args.threads
 verbose = args.verbose
 only_use_provided_fixes = args.only_use_provided_fixes
 use_fixed_len_before_and_after_fixes = args.use_fixed_len_before_and_after_fixes
+ucsc_browser_coords = args.ucsc_browser_coords
 
 if use_fixed_len_before_and_after_fixes:
     print("Error: --use_fixed_len_before_and_after_fixes is not implemented yet. Please remove this flag and try again.")
@@ -110,12 +114,17 @@ def main():
     else:
         only_use_provided_fixes_arg = ""
 
+    if ucsc_browser_coords:
+        ucsc_browser_coords_arg = "--ucsc_browser_coords"
+    else:
+        ucsc_browser_coords_arg = ""
+
     create_tmp_folder = os.system(f"mkdir {out_dir}tmp")
 
     optional_path_prefix = ""
     optional_path_prefix = "./src/STRcount/" # If you dont want to install to run the tool
 
-    command = f"{optional_path_prefix}genome_str_graph_generator.py --ref {ref} --config {config_file} {rep_orientation_arg} {pre_orientation_arg} {suf_orientation_arg} {verbose_arg} {only_use_provided_fixes_arg} > {out_dir}tmp/genome_str_graph.gfa"
+    command = f"{optional_path_prefix}genome_str_graph_generator.py --ref {ref} --config {config_file} {rep_orientation_arg} {pre_orientation_arg} {suf_orientation_arg} {verbose_arg} {only_use_provided_fixes_arg} {ucsc_browser_coords_arg} > {out_dir}tmp/genome_str_graph.gfa"
     print_red(command)
     str_graph_generator = os.system(command)
 
